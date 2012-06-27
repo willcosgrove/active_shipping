@@ -21,7 +21,7 @@ module ActiveMerchant
         destination = Location.from(destination)
         packages = Array(packages)
         self.class.headers 'SOAPAction' => 'http://gso.com/GsoShipWS/GetShippingRatesAndTimes'
-        packages.collect do |package|
+        responses = packages.collect do |package|
           builder = Builder::XmlMarkup.new
           body = builder.tag!("soapenv:Envelope", {"xmlns:soapenv" => "http://schemas.xmlsoap.org/soap/envelope/", "xmlns:gsos" => "http://gso.com/GsoShipWS"}) { |b|
             b.tag!("soapenv:Header") {
@@ -42,8 +42,10 @@ module ActiveMerchant
             }
           }
           response = self.class.post("http://wsa.gso.com/gsoshipws1.0/gsoshipws.asmx", body: body)
-          parse_rates_response(origin, destination, packages, response, options)
+          [package, response]
         end
+        rate_estimates = parse_rates_responses(origin, destination, packages, responses, options)
+        RateResponse.new(true, "200", {}, rate_estimates: rate_estimates)
       end
 
       def find_tracking_info(tracking_number, options={})
@@ -56,10 +58,16 @@ module ActiveMerchant
 
       private
 
-      def parse_rates_response(origin, destination, packages, response, options={})
-        rate_estimates = response["Envelope"]["Body"]["GetShippingRatesAndTimesResponse"]["GetShippingRatesAndTimesResult"]["DeliveryServices"].collect do |delivery_service|
-          RateEstimate.new()
-          # [delivery_service["ServiceDescription"], (delivery_service["ShipmentCharges"]["TotalCharge"].to_f * 100).to_i]
+      def parse_rates_responses(origin, destination, packages, responses, options={})
+        deilvery_services = responses.first[1]["Envelope"]["Body"]["GetShippingRatesAndTimesResponse"]["GetShippingRatesAndTimesResult"]["DeliveryServices"]
+        delivery_services.collect do |delivery_service|
+          package_rates = responses.collect { |response| {package: response[0], rate: response["ShipmentCharges"]["TotalCharge"] } }
+          RateEstimate.new(origin, destination, @@name, delivery_service["ServiceDescription"], {
+            service_code: delivery_service["ServiceCode"],
+            package_rates: package_rates,
+            currency: 'USD',
+            delivery_range: [Date.strptime(delivery_service["GuaranteedDeliveryDateTime"], "%Y-%m-%dT%H:%M:%S")] * 2
+          })
         end
       end
       
