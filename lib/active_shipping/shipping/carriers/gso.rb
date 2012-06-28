@@ -49,7 +49,26 @@ module ActiveMerchant
       end
 
       def find_tracking_info(tracking_number, options={})
-
+        self.class.headers 'SOAPAction' => 'http://gso.com/GsoShipWS/TrackShipment'
+        builder = Builder::XmlMarkup.new
+        body = builder.tag!("soapenv:Envelope", {"xmlns:soapenv" => "http://schemas.xmlsoap.org/soap/envelope/", "xmlns:gsos" => "http://gso.com/GsoShipWS"}) { |b|
+          b.tag!("soapenv:Body") {
+            b.tag!("gsos:TrackShipment") {
+              b.tag!("gsos:TrackShipmentRequest") {
+                b.gsos :AccountNumber, @options[:account_number]
+                b.gsos :SearchType, "TRACKINGNUM"
+                b.gsos :SearchValue, tracking_number
+              }
+            }
+          }
+        }
+        response = self.class.post("http://wsa.gso.com/gsoshipws1.0/gsoshipws.asmx", body: body)
+        response = response["Envelope"]["Body"]["TrackShipmentResponse"]["TrackShipmentResult"]
+        shipment_events = response["TransitNotes"].collect do |transit_note|
+          ShipmentEvent.new(nil, DateTime.strptime(transit_note["EventDate"], "%Y-%m-%dT%H:%M:%S"), nil, transit_note["Comment"])
+        end
+        status = response["Delivery"]["TransitStatus"].downcase.to_sym
+        TrackingResponse.new(true, "200", {}, carrier: @@name, status: status, scheduled_delivery_date: Date.strptime(response["Delivery"]["ScheduledDate"], "%Y-%m-%dT%H:%M:%S"), tracking_number: tracking_number, shipment_events: shipment_events)
       end
 
       def requirements
