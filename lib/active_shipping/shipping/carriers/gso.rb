@@ -1,3 +1,5 @@
+require 'httparty'
+
 module ActiveMerchant
   module Shipping
     class GSO < Carrier
