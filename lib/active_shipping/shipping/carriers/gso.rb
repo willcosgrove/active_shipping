@@ -86,7 +86,7 @@ module ActiveMerchant
         delivery_services = responses.first[1]["Envelope"]["Body"]["GetShippingRatesAndTimesResponse"]["GetShippingRatesAndTimesResult"]["DeliveryServices"]["DeliveryService"]
         delivery_services.each_with_index.collect do |delivery_service, i|
           puts responses.inspect
-          package_rates = responses.collect { |response| binding.pry; { package: response[0], rate: response[1]["Envelope"]["Body"]["GetShippingRatesAndTimesResponse"]["GetShippingRatesAndTimesResult"]["DeliveryServices"]["DeliveryService"][i]["ShipmentCharges"]["TotalCharge"] } }
+          package_rates = responses.collect { |response| { package: response[0], rate: response[1]["Envelope"]["Body"]["GetShippingRatesAndTimesResponse"]["GetShippingRatesAndTimesResult"]["DeliveryServices"]["DeliveryService"][i]["ShipmentCharges"]["TotalCharge"] } }
           RateEstimate.new(origin, destination, @@name, delivery_service["ServiceDescription"], {
             service_code: delivery_service["ServiceCode"],
             package_rates: package_rates,
