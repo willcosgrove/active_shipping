@@ -21,7 +21,8 @@ module ActiveMerchant
       def find_rates(origin, destination, packages, options = {})
         origin = Location.from(origin)
         destination = Location.from(destination)
-        packages = Array(packages)
+        packages = Array(packages).flatten
+        packages.shift
         self.class.headers 'SOAPAction' => 'http://gso.com/GsoShipWS/GetShippingRatesAndTimes'
         responses = packages.collect do |package|
           builder = Builder::XmlMarkup.new
@@ -38,11 +39,13 @@ module ActiveMerchant
                   b.gsos :AccountNumber, @options[:account_number]
                   b.gsos :OriginZip, origin.postal_code
                   b.gsos :DestinationZip, destination.postal_code
-                  b.gsos :PackageWeight, package.pounds
+                  b.gsos :PackageWeight, package.pounds.to_i
+                  b.gsos :ShipDate, DateTime.current.xmlschema
                 }
               }
             }
           }
+          puts body.inspect
           response = self.class.post("http://wsa.gso.com/gsoshipws1.0/gsoshipws.asmx", body: body)
           [package, response]
         end
@@ -80,9 +83,10 @@ module ActiveMerchant
       private
 
       def parse_rates_responses(origin, destination, packages, responses, options={})
-        deilvery_services = responses.first[1]["Envelope"]["Body"]["GetShippingRatesAndTimesResponse"]["GetShippingRatesAndTimesResult"]["DeliveryServices"]
-        delivery_services.collect do |delivery_service|
-          package_rates = responses.collect { |response| {package: response[0], rate: response["ShipmentCharges"]["TotalCharge"] } }
+        delivery_services = responses.first[1]["Envelope"]["Body"]["GetShippingRatesAndTimesResponse"]["GetShippingRatesAndTimesResult"]["DeliveryServices"]["DeliveryService"]
+        delivery_services.each_with_index.collect do |delivery_service, i|
+          puts responses.inspect
+          package_rates = responses.collect { |response| binding.pry; { package: response[0], rate: response[1]["Envelope"]["Body"]["GetShippingRatesAndTimesResponse"]["GetShippingRatesAndTimesResult"]["DeliveryServices"]["DeliveryService"][i]["ShipmentCharges"]["TotalCharge"] } }
           RateEstimate.new(origin, destination, @@name, delivery_service["ServiceDescription"], {
             service_code: delivery_service["ServiceCode"],
             package_rates: package_rates,
