@@ -21,8 +21,7 @@ module ActiveMerchant
       def find_rates(origin, destination, packages, options = {})
         origin = Location.from(origin)
         destination = Location.from(destination)
-        packages = Array(packages).flatten
-        packages.shift
+        packages = Array(packages)
         self.class.headers 'SOAPAction' => 'http://gso.com/GsoShipWS/GetShippingRatesAndTimes'
         responses = packages.collect do |package|
           builder = Builder::XmlMarkup.new
