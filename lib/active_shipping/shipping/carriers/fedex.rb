@@ -166,7 +166,7 @@ module ActiveMerchant
           # Returns delivery dates
           root_node << XmlNode.new('ReturnTransitAndCommit', true)
           # Returns saturday delivery shipping options when available
-          root_node << XmlNode.new('VariableOptions', 'SATURDAY_DELIVERY')
+          # root_node << XmlNode.new('VariableOptions', 'SATURDAY_DELIVERY')
           
           root_node << XmlNode.new('RequestedShipment') do |rs|
             rs << XmlNode.new('ShipTimestamp', Time.now)
