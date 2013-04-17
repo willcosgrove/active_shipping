@@ -8,7 +8,7 @@ module ActiveMerchant
       headers 'Content-Type' => 'text/xml;charset=UTF-8', "User-Agent" => '485.13.9 Darwin/11.0.0'
       cattr_reader :name
       @@name = "Golden State Overnight"
-      
+
       SERVICE_TYPES = {
         "PDS" => "GSO Priority Overnight",
         "EPS" => "GSO Early Priority Overnight",
@@ -17,7 +17,7 @@ module ActiveMerchant
         "ESS" => "GSO Early Saturday",
         "CPS" => "GSO Ground"
       }
-      
+
       def find_rates(origin, destination, packages, options = {})
         origin = Location.from(origin)
         destination = Location.from(destination)
@@ -39,7 +39,7 @@ module ActiveMerchant
                   b.gsos :OriginZip, origin.postal_code
                   b.gsos :DestinationZip, destination.postal_code
                   b.gsos :PackageWeight, package.pounds.to_i
-                  b.gsos :ShipDate, DateTime.now.next_week.beginning_of_week.xmlschema
+                  b.gsos :ShipDate, (DateTime.now.next_week.beginning_of_week + 1.day).xmlschema
                 }
               }
             }
@@ -92,7 +92,7 @@ module ActiveMerchant
           })
         end
       end
-      
+
     end
   end
 end
